@@ -4,7 +4,14 @@
 if (!window.MIXPANEL_WAS_INJECTED) {
 	window.MIXPANEL_WAS_INJECTED = true;
 	console.log("mp-tweaks: injecting mixpanel snippet");
-	const MIXPANEL_CUSTOM_LIB_URL = chrome.runtime.getURL("/src/lib/mixpanel-full.js");
+
+	// If mixpanel already exists on the page, nuke it completely
+	if (window.mixpanel) {
+		console.log("mp-tweaks: existing mixpanel found, replacing with mp-tweaks version");
+	}
+	window.mixpanel = [];
+
+	const MIXPANEL_CUSTOM_LIB_URL = "https://cdn-dev.mxpnl.com/libs/mixpanel.dev.js";
 		(function (f, b) {
 			if (!b.__SV) {
 				var e, g, i, h;
@@ -55,6 +62,13 @@ if (!window.MIXPANEL_WAS_INJECTED) {
 				e.type = "text/javascript";
 				e.async = !0;
 				e.src = MIXPANEL_CUSTOM_LIB_URL;
+				console.log("mp-tweaks: loading custom mixpanel lib from " + MIXPANEL_CUSTOM_LIB_URL);
+				e.addEventListener('load', function() {
+					console.log("mp-tweaks: custom mixpanel library loaded successfully from " + MIXPANEL_CUSTOM_LIB_URL);
+				});
+				e.addEventListener('error', function() {
+					console.error("mp-tweaks: FAILED to load custom mixpanel library from " + MIXPANEL_CUSTOM_LIB_URL);
+				});
 				g = f.getElementsByTagName("script")[0];
 				g.parentNode.insertBefore(e, g);
 			}
