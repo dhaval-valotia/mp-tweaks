@@ -1330,7 +1330,7 @@ function sessionReplayInit(token, opts = {}, user) {
 				debug: true,
 				api_transport: 'XHR',  // Back to XHR - CORS should work now that we keep origin header
 				persistence: "localStorage",
-				recorder_src: 'https://cdn-dev.mxpnl.com/libs/mixpanel-recorder.dev.js',
+				recorder_src: 'https://devbox-5145.devbox.mixpanel.org/libs/mixpanel-js/build/mixpanel-recorder.js',
 
 			}, "mp_tweaks");
 		} else {

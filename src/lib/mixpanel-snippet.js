@@ -11,7 +11,7 @@ if (!window.MIXPANEL_WAS_INJECTED) {
 	}
 	window.mixpanel = [];
 
-	const MIXPANEL_CUSTOM_LIB_URL = "https://cdn-dev.mxpnl.com/libs/mixpanel.dev.js";
+	const MIXPANEL_CUSTOM_LIB_URL = "https://devbox-5145.devbox.mixpanel.org/libs/mixpanel-js/build/mixpanel.js";
 		(function (f, b) {
 			if (!b.__SV) {
 				var e, g, i, h;
