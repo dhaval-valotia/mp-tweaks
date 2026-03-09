@@ -22836,6 +22836,7 @@
     };
 
     MixpanelRecorder.prototype.startRecording = function(options) {
+        console.log('[mp-diag] MixpanelRecorder.startRecording called', options);
         options = options || {};
         if (this.activeRecording && !this.activeRecording.isRrwebStopped()) {
             logger.log('Recording already in progress, skipping startRecording.');
@@ -22870,13 +22871,18 @@
             sharedLockStorage: this.sharedLockStorage
         };
 
-        if (options.activeSerializedRecording) {
-            this.activeRecording = SessionRecording.deserialize(options.activeSerializedRecording, sessionRecordingOptions);
-        } else {
-            this.activeRecording = new SessionRecording(sessionRecordingOptions);
+        try {
+            if (options.activeSerializedRecording) {
+                this.activeRecording = SessionRecording.deserialize(options.activeSerializedRecording, sessionRecordingOptions);
+            } else {
+                this.activeRecording = new SessionRecording(sessionRecordingOptions);
+            }
+            console.log('[mp-diag] SessionRecording created, calling startRecording, rrwebRecord=' + typeof this.rrwebRecord);
+            this.activeRecording.startRecording(options.shouldStopBatcher);
+            console.log('[mp-diag] SessionRecording.startRecording returned');
+        } catch(e) {
+            console.error('[mp-diag] startRecording error:', e);
         }
-
-        this.activeRecording.startRecording(options.shouldStopBatcher);
         return this.recordingRegistry.setActiveRecording(this.activeRecording.serialize());
     };
 
