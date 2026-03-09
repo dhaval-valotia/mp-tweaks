@@ -22343,6 +22343,7 @@
 
         var privacyConfig = getPrivacyConfig(this._mixpanel);
 
+        console.log('[mp-diag] about to call _rrwebRecord, type=' + typeof this._rrwebRecord, '_stopRecording=' + this._stopRecording);
         try {
             this._stopRecording = this._rrwebRecord({
                 'emit': function (ev) {
@@ -22391,7 +22392,9 @@
                     })
                 ] : []
             });
+            console.log('[mp-diag] _rrwebRecord returned, _stopRecording=' + typeof this._stopRecording);
         } catch (err) {
+            console.error('[mp-diag] _rrwebRecord THREW:', err);
             this.reportError('Unexpected error when starting rrweb recording.', err);
         }
 
