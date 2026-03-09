@@ -22906,13 +22906,16 @@
     };
 
     MixpanelRecorder.prototype.resumeRecording = function (startNewIfInactive) {
+        console.log('[mp-diag] resumeRecording called, startNewIfInactive=' + startNewIfInactive + ' activeRecording=' + !!this.activeRecording);
         if (this.activeRecording && this.activeRecording.isRrwebStopped()) {
+            console.log('[mp-diag] resuming stopped recording');
             this.activeRecording.startRecording(false);
             return PromisePolyfill.resolve(null);
         }
 
         return this.recordingRegistry.getActiveRecording()
             .then(function (activeSerializedRecording) {
+                console.log('[mp-diag] getActiveRecording resolved, found=' + !!activeSerializedRecording + ' startNewIfInactive=' + startNewIfInactive);
                 if (activeSerializedRecording && !this.stopRecordingInProgress) {
                     return this.startRecording({activeSerializedRecording: activeSerializedRecording});
                 } else if (startNewIfInactive) {
@@ -22921,7 +22924,10 @@
                     logger.log('No resumable recording found.');
                     return null;
                 }
-            }.bind(this));
+            }.bind(this))
+            .catch(function(err) {
+                console.error('[mp-diag] resumeRecording error:', err);
+            });
     };
 
 
