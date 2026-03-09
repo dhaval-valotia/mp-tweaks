@@ -5,13 +5,67 @@ if (!window.MIXPANEL_WAS_INJECTED) {
 	window.MIXPANEL_WAS_INJECTED = true;
 	console.log("mp-tweaks: injecting mixpanel snippet");
 
-	// If mixpanel already exists on the page, nuke it completely
+	// If mixpanel already exists on the page, save a ref and nuke it
 	if (window.mixpanel) {
-		console.log("mp-tweaks: existing mixpanel found, replacing with mp-tweaks version");
+		console.log("mp-tweaks: existing mixpanel found, saving ref and replacing");
+		window.__WALNUT_MIXPANEL = window.mixpanel;
 	}
 	window.mixpanel = [];
+	window.__mp_recorder = undefined; // force reload of recorder from custom build
 
-	const MIXPANEL_CUSTOM_LIB_URL = "https://devbox-5145.devbox.mixpanel.org/libs/mixpanel-js/build/mixpanel.js";
+	// Periodically try to stop Walnut's vendor-bundled rrweb recording
+	// Their Mixpanel instance may initialize AFTER ours
+	var walnutKillAttempts = 0;
+	var walnutKillInterval = setInterval(function() {
+		walnutKillAttempts++;
+		// Check saved reference
+		if (window.__WALNUT_MIXPANEL && window.__WALNUT_MIXPANEL.stop_session_recording) {
+			try {
+				window.__WALNUT_MIXPANEL.stop_session_recording();
+				console.log("[mp-tweaks] stopped Walnut recording via saved ref");
+				clearInterval(walnutKillInterval);
+				return;
+			} catch (e) {}
+		}
+		// Also check for any named instances Walnut might create
+		if (window.mixpanel && window.mixpanel._i && window.mixpanel._i.length > 0) {
+			// Check all initialized instances
+			for (var key in window.mixpanel) {
+				if (window.mixpanel[key] && key !== 'mp_tweaks' && window.mixpanel[key].stop_session_recording) {
+					try {
+						window.mixpanel[key].stop_session_recording();
+						console.log("[mp-tweaks] stopped recording on instance: " + key);
+					} catch (e) {}
+				}
+			}
+		}
+		if (walnutKillAttempts >= 30) {
+			clearInterval(walnutKillInterval);
+			console.log("[mp-tweaks] gave up trying to stop Walnut recording after 30 attempts");
+		}
+	}, 2000);
+
+	const MIXPANEL_CUSTOM_LIB_URL = window.MIXPANEL_CUSTOM_LIB_URL_OVERRIDE || "https://devbox-5145.devbox.mixpanel.org/libs/mixpanel-js/build/mixpanel.js";
+	const MIXPANEL_CUSTOM_RECORDER_URL = window.MIXPANEL_CUSTOM_RECORDER_URL_OVERRIDE || "https://devbox-5145.devbox.mixpanel.org/libs/mixpanel-js/build/mixpanel-recorder.js";
+
+	// Load the custom recorder FIRST, then load the main SDK.
+	// This ensures window.__mp_recorder is set before the SDK tries to load the recorder from CDN.
+	var recorderScript = document.createElement("script");
+	recorderScript.type = "text/javascript";
+	recorderScript.src = MIXPANEL_CUSTOM_RECORDER_URL;
+	console.log("mp-tweaks: loading custom recorder from " + MIXPANEL_CUSTOM_RECORDER_URL);
+	recorderScript.addEventListener('load', function() {
+		console.log("mp-tweaks: custom recorder loaded, __mp_recorder=" + typeof window.__mp_recorder);
+		// Now load the main SDK
+		loadMainSDK();
+	});
+	recorderScript.addEventListener('error', function() {
+		console.error("mp-tweaks: FAILED to load custom recorder, falling back to loading SDK without it");
+		loadMainSDK();
+	});
+	document.head.appendChild(recorderScript);
+
+	function loadMainSDK() {
 		(function (f, b) {
 			if (!b.__SV) {
 				var e, g, i, h;
@@ -74,6 +128,7 @@ if (!window.MIXPANEL_WAS_INJECTED) {
 			}
 		})(document, window.mixpanel || []);
 		console.log("mp-tweaks: mixpanel snippet injected! awaiting init()");
+	}
 }
 else {
 	console.log("mp-tweaks: mixpanel already injected");

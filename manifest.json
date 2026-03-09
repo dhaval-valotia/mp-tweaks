@@ -36,7 +36,7 @@
 			]
 		},
 		{
-			"resources": ["src/lib/mixpanel-snippet.js", "src/lib/mixpanel-full.js"],
+			"resources": ["src/lib/mixpanel-snippet.js", "src/lib/mixpanel-full.js", "src/lib/mixpanel-recorder.js"],
 			"matches": ["*://*/*"]
 		}
 	],

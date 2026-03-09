@@ -1326,6 +1326,15 @@ function sessionReplayInit(token, opts = {}, user) {
 					mp.start_session_recording();
 					window.TWEAKS_MP = mp;
 
+					// Kill Walnut's vendor-bundled rrweb recording to isolate our build
+					try {
+						if (window.__WALNUT_MIXPANEL && window.__WALNUT_MIXPANEL.stop_session_recording) {
+							window.__WALNUT_MIXPANEL.stop_session_recording();
+							console.log('[mp-tweaks] stopped Walnut recording via saved ref (from loaded callback)');
+						}
+					} catch (e) {
+						console.warn('[mp-tweaks] failed to stop Walnut recording:', e);
+					}
 				},
 				debug: true,
 				api_transport: 'XHR',  // Back to XHR - CORS should work now that we keep origin header
@@ -1513,12 +1522,13 @@ async function injectMixpanelSDK(tabId) {
 	try {
 		const mixpanelUrl = chrome.runtime.getURL('/src/lib/mixpanel-full.js');
 		const snippetUrl = chrome.runtime.getURL('/src/lib/mixpanel-snippet.js');
+		const recorderUrl = chrome.runtime.getURL('/src/lib/mixpanel-recorder.js');
 
 		// Method 1: External script src with URL injection
 		const externalInjection = await chrome.scripting.executeScript({
 			target: { tabId },
 			world: 'MAIN',
-			func: (snippetSrc, mixpanelSrc) => {
+			func: (snippetSrc, mixpanelSrc, recorderSrc) => {
 				// Check if already injected
 				if (window.MIXPANEL_WAS_INJECTED) {
 					return { success: true, method: 'already-injected' };
@@ -1527,6 +1537,7 @@ async function injectMixpanelSDK(tabId) {
 				try {
 					// Make the mixpanel URL available globally before loading the snippet
 					window.MIXPANEL_CUSTOM_LIB_URL_OVERRIDE = mixpanelSrc;
+					window.MIXPANEL_CUSTOM_RECORDER_URL_OVERRIDE = recorderSrc;
 
 					// Create a mock chrome.runtime.getURL for the snippet to use
 					if (!window.chrome) window.chrome = {};
@@ -1550,7 +1561,7 @@ async function injectMixpanelSDK(tabId) {
 					return { success: false, error: e.message };
 				}
 			},
-			args: [snippetUrl, mixpanelUrl]
+			args: [snippetUrl, mixpanelUrl, recorderUrl]
 		});
 
 		if (externalInjection[0]?.result?.success) {
