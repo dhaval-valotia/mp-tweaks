@@ -12102,6 +12102,7 @@
                 var idx = mutationBuffers.indexOf(mutationBuffer);
                 if (idx !== -1) {
                     mutationBuffers.splice(idx, 1);
+                    console.log("[rrweb-v9] removed buffer at index " + idx + ", mutationBuffers.length now=" + mutationBuffers.length);
                 }
                 mutationBuffer.destroy();
             }
@@ -12239,6 +12240,7 @@
             return this.iframeObserverCleanupMap.get(iframeEl);
         };
         _proto.removeIframe = function removeIframe(iframeEl) {
+            console.log("[rrweb-v9] removeIframe called, hasStoredDoc=" + this.iframeContentDocumentMap.has(iframeEl) + " hasCleanup=" + this.iframeObserverCleanupMap.has(iframeEl));
             var storedDoc = this.iframeContentDocumentMap.get(iframeEl);
             if (storedDoc) {
                 this.stylesheetManager.cleanupStylesheetsForRemovedNode(storedDoc);
@@ -12250,8 +12252,11 @@
             var observerCleanup = this.iframeObserverCleanupMap.get(iframeEl);
             if (observerCleanup) {
                 try {
+                    console.log("[rrweb-v9] calling observer cleanup for iframe");
                     observerCleanup();
-                } catch (e2) {}
+                } catch (e2) {
+                    console.warn("[rrweb-v9] observer cleanup error:", e2);
+                }
                 this.iframeObserverCleanupMap.delete(iframeEl);
             }
         };
