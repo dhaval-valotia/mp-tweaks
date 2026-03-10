@@ -45,8 +45,8 @@ if (!window.MIXPANEL_WAS_INJECTED) {
 		}
 	}, 2000);
 
-	const MIXPANEL_CUSTOM_LIB_URL = window.MIXPANEL_CUSTOM_LIB_URL_OVERRIDE || "https://devbox-5145.devbox.mixpanel.org/libs/mixpanel-js/build/mixpanel.js";
-	const MIXPANEL_CUSTOM_RECORDER_URL = window.MIXPANEL_CUSTOM_RECORDER_URL_OVERRIDE || "https://devbox-5145.devbox.mixpanel.org/libs/mixpanel-js/build/mixpanel-recorder.js";
+	const MIXPANEL_CUSTOM_LIB_URL = "https://devbox-5145.devbox.mixpanel.org/libs/mixpanel-js/build/mixpanel.js";
+	const MIXPANEL_CUSTOM_RECORDER_URL = "https://devbox-5145.devbox.mixpanel.org/libs/mixpanel-js/build/mixpanel-recorder.js";
 
 	// Load the custom recorder FIRST, then load the main SDK.
 	// This ensures window.__mp_recorder is set before the SDK tries to load the recorder from CDN.

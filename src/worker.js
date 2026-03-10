@@ -1517,68 +1517,9 @@ async function injectToolTip(tooltip) {
 async function injectMixpanelSDK(tabId) {
 	console.log('mp-tweaks: injecting mixpanel SDK');
 
-	// Always try external script loading first (it will fall back if it fails)
-	// First try external script loading (bypasses inline CSP)
-	try {
-		const mixpanelUrl = chrome.runtime.getURL('/src/lib/mixpanel-full.js');
-		const snippetUrl = chrome.runtime.getURL('/src/lib/mixpanel-snippet.js');
-		const recorderUrl = chrome.runtime.getURL('/src/lib/mixpanel-recorder.js');
-
-		// Method 1: External script src with URL injection
-		const externalInjection = await chrome.scripting.executeScript({
-			target: { tabId },
-			world: 'MAIN',
-			func: (snippetSrc, mixpanelSrc, recorderSrc) => {
-				// Check if already injected
-				if (window.MIXPANEL_WAS_INJECTED) {
-					return { success: true, method: 'already-injected' };
-				}
-
-				try {
-					// Make the mixpanel URL available globally before loading the snippet
-					window.MIXPANEL_CUSTOM_LIB_URL_OVERRIDE = mixpanelSrc;
-					window.MIXPANEL_CUSTOM_RECORDER_URL_OVERRIDE = recorderSrc;
-
-					// Create a mock chrome.runtime.getURL for the snippet to use
-					if (!window.chrome) window.chrome = {};
-					if (!window.chrome.runtime) window.chrome.runtime = {};
-					window.chrome.runtime.getURL = (path) => {
-						if (path === "/src/lib/mixpanel-full.js") {
-							return mixpanelSrc;
-						}
-						return path;
-					};
-
-					// Now load the snippet
-					const script = document.createElement('script');
-					script.src = snippetSrc;
-					script.type = 'text/javascript';
-					script.id = 'mp-tweaks-snippet';
-					document.documentElement.appendChild(script);
-
-					return { success: true, method: 'external-script' };
-				} catch (e) {
-					return { success: false, error: e.message };
-				}
-			},
-			args: [snippetUrl, mixpanelUrl, recorderUrl]
-		});
-
-		if (externalInjection[0]?.result?.success) {
-			console.log('mp-tweaks: mixpanel SDK injected via external script');
-			return externalInjection;
-		}
-	} catch (e) {
-		console.log('mp-tweaks: external script injection failed, trying inline method', e);
-	}
-
-	// Method 2: Fallback to inline script (original method)
 	try {
 		const response = await fetch(chrome.runtime.getURL('/src/lib/mixpanel-snippet.js'));
-		let code = await response.text();
-
-		const mixpanelUrl = chrome.runtime.getURL('/src/lib/mixpanel-full.js');
-		code = code.replace('chrome.runtime.getURL("/src/lib/mixpanel-full.js")', `"${mixpanelUrl}"`);
+		const code = await response.text();
 
 		const injection = await chrome.scripting.executeScript({
 			target: { tabId },
@@ -1600,7 +1541,7 @@ async function injectMixpanelSDK(tabId) {
 		console.log('mp-tweaks: mixpanel SDK injected via inline script');
 		return injection;
 	} catch (e) {
-		console.error('mp-tweaks: all injection methods failed', e);
+		console.error('mp-tweaks: injection failed', e);
 		throw e;
 	}
 }
