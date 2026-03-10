@@ -20,7 +20,34 @@ if (!window.MIXPANEL_WAS_INJECTED) {
 		window.__WALNUT_MIXPANEL = window.mixpanel;
 	}
 	window.mixpanel = [];
-	window.__mp_recorder = undefined; // force reload of recorder from custom build
+
+	// No-op recorder class — Walnut's SDK gets this instead of the real one
+	var NoopRecorder = function() { console.log('[mp-tweaks] NoopRecorder instantiated (blocking Walnut)'); };
+	NoopRecorder.prototype.startRecording = function() {};
+	NoopRecorder.prototype.stopRecording = function() {};
+	NoopRecorder.prototype.resumeRecording = function() { return Promise.resolve(null); };
+	NoopRecorder.prototype.resetRecording = function() {};
+	NoopRecorder.prototype.getActiveReplayId = function() { return null; };
+	Object.defineProperty(NoopRecorder.prototype, 'replayId', { get: function() { return null; } });
+
+	// Gate __mp_recorder: intercept writes from the recorder IIFE, return NoopRecorder unless unlocked
+	var __savedRecorderClass = null;
+	Object.defineProperty(window, '__mp_recorder', {
+		get: function() {
+			if (window.__mp_tweaks_unlock_recorder) {
+				return __savedRecorderClass;
+			}
+			return NoopRecorder;
+		},
+		set: function(val) {
+			if (val && val !== NoopRecorder && typeof val === 'function') {
+				__savedRecorderClass = val;
+				console.log('[mp-tweaks] intercepted real __mp_recorder class');
+			}
+		},
+		configurable: true,
+		enumerable: true
+	});
 
 	// Periodically try to stop Walnut's vendor-bundled rrweb recording
 	// Their Mixpanel instance may initialize AFTER ours
@@ -64,16 +91,14 @@ if (!window.MIXPANEL_WAS_INJECTED) {
 	recorderScript.src = MIXPANEL_CUSTOM_RECORDER_URL;
 	console.log("mp-tweaks: loading custom recorder from " + MIXPANEL_CUSTOM_RECORDER_URL);
 	recorderScript.addEventListener('load', function() {
-		console.log("mp-tweaks: custom recorder loaded, __mp_recorder=" + typeof window.__mp_recorder);
+		console.log("mp-tweaks: custom recorder loaded, real class intercepted=" + !!__savedRecorderClass);
 		// Restore real MutationObserver before our SDK loads
 		window.MutationObserver = __REAL_MO;
 		console.log("[mp-tweaks] restored real MutationObserver for our rrweb");
-		// Now load the main SDK
 		loadMainSDK();
 	});
 	recorderScript.addEventListener('error', function() {
-		console.error("mp-tweaks: FAILED to load custom recorder, falling back to loading SDK without it");
-		// Still restore real MutationObserver so the page isn't broken
+		console.error("mp-tweaks: FAILED to load custom recorder");
 		window.MutationObserver = __REAL_MO;
 		console.log("[mp-tweaks] restored real MutationObserver (recorder load failed)");
 		loadMainSDK();

@@ -1323,7 +1323,13 @@ function sessionReplayInit(token, opts = {}, user) {
 
 				loaded: function (mp) {
 					console.log('mp-tweaks: session replay + autocapture loaded');
+					// Unlock the real recorder class for our SDK instance only
+					window.__mp_tweaks_unlock_recorder = true;
+					console.log('[mp-tweaks] unlocked real __mp_recorder for our SDK');
 					mp.start_session_recording();
+					// Re-lock so Walnut's SDK can't grab it later
+					window.__mp_tweaks_unlock_recorder = false;
+					console.log('[mp-tweaks] re-locked __mp_recorder');
 					window.TWEAKS_MP = mp;
 
 					// Kill Walnut's vendor-bundled rrweb recording to isolate our build
