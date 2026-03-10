@@ -5,6 +5,15 @@ if (!window.MIXPANEL_WAS_INJECTED) {
 	window.MIXPANEL_WAS_INJECTED = true;
 	console.log("mp-tweaks: injecting mixpanel snippet");
 
+	// Save real MutationObserver and replace with no-op to prevent Walnut's rrweb from running
+	var __REAL_MO = window.MutationObserver;
+	window.MutationObserver = function FakeMutationObserver() {
+		console.log("[mp-tweaks] blocked Walnut MutationObserver creation");
+	};
+	window.MutationObserver.prototype.observe = function() {};
+	window.MutationObserver.prototype.disconnect = function() {};
+	window.MutationObserver.prototype.takeRecords = function() { return []; };
+
 	// If mixpanel already exists on the page, save a ref and nuke it
 	if (window.mixpanel) {
 		console.log("mp-tweaks: existing mixpanel found, saving ref and replacing");
@@ -56,11 +65,17 @@ if (!window.MIXPANEL_WAS_INJECTED) {
 	console.log("mp-tweaks: loading custom recorder from " + MIXPANEL_CUSTOM_RECORDER_URL);
 	recorderScript.addEventListener('load', function() {
 		console.log("mp-tweaks: custom recorder loaded, __mp_recorder=" + typeof window.__mp_recorder);
+		// Restore real MutationObserver before our SDK loads
+		window.MutationObserver = __REAL_MO;
+		console.log("[mp-tweaks] restored real MutationObserver for our rrweb");
 		// Now load the main SDK
 		loadMainSDK();
 	});
 	recorderScript.addEventListener('error', function() {
 		console.error("mp-tweaks: FAILED to load custom recorder, falling back to loading SDK without it");
+		// Still restore real MutationObserver so the page isn't broken
+		window.MutationObserver = __REAL_MO;
+		console.log("[mp-tweaks] restored real MutationObserver (recorder load failed)");
 		loadMainSDK();
 	});
 	document.head.appendChild(recorderScript);
